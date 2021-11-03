@@ -220,6 +220,7 @@ impl Brewfile {
         command.arg("-o");
         command.arg(&output);
         command.args(objects);
+        command.arg(format!("--sysroot={}", options.sysroot().to_string_lossy()));
         command.stdout(Stdio::inherit());
         command.stderr(Stdio::inherit());
         command.stdin(Stdio::inherit());
@@ -250,6 +251,7 @@ impl Brewfile {
         command.args(crate::config::ARCHIVER_FLAGS);
         command.arg(&output);
         command.args(objects);
+        command.arg(format!("--sysroot={}", options.sysroot().to_string_lossy()));
         command.stdout(Stdio::inherit());
         command.stderr(Stdio::inherit());
         command.stdin(Stdio::inherit());
