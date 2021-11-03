@@ -1,0 +1,9 @@
+[package]
+edition = "2021"
+name = "brew"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+compiler = {git = "https://github.com/shipsimfan/lib-compiler.git", branch = "main"}
