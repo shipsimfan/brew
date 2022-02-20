@@ -1,11 +1,6 @@
-use std::{
-    path::Path,
-    process::{Command, Stdio},
-};
-
-use crate::arguments::Options;
-
 use super::error::Error;
+use crate::arguments::Options;
+use std::{path::Path, process::Command};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Language {
@@ -111,18 +106,12 @@ impl Language {
         command.arg(destination_path);
         command.arg(source_path);
         command.arg(format!("--sysroot={}", options.sysroot().to_string_lossy()));
-        command.stdout(Stdio::inherit());
-        command.stderr(Stdio::inherit());
-        command.stdin(Stdio::inherit());
 
-        match command.output() {
-            Ok(output) => {
-                if output.status.success() {
-                    Ok(CompileStatus::Complete)
-                } else {
-                    Err(Error::CompileError(source_path.to_owned()))
-                }
-            }
+        match command.status() {
+            Ok(status) => match status.success() {
+                true => Ok(CompileStatus::Complete),
+                false => Err(Error::CompileError(source_path.to_owned())),
+            },
             Err(error) => Err(Error::RunCompilerError("c", error)),
         }
     }
@@ -159,18 +148,12 @@ impl Language {
         command.arg(destination_path);
         command.arg(source_path);
         command.arg(format!("--sysroot={}", options.sysroot().to_string_lossy()));
-        command.stdout(Stdio::inherit());
-        command.stderr(Stdio::inherit());
-        command.stdin(Stdio::inherit());
 
-        match command.output() {
-            Ok(output) => {
-                if output.status.success() {
-                    Ok(CompileStatus::Complete)
-                } else {
-                    Err(Error::CompileError(source_path.to_owned()))
-                }
-            }
+        match command.status() {
+            Ok(status) => match status.success() {
+                true => Ok(CompileStatus::Complete),
+                false => Err(Error::CompileError(source_path.to_owned())),
+            },
             Err(error) => Err(Error::RunCompilerError("c++", error)),
         }
     }
@@ -205,18 +188,12 @@ impl Language {
         command.arg("-o");
         command.arg(destination_path);
         command.arg(source_path);
-        command.stdout(Stdio::inherit());
-        command.stderr(Stdio::inherit());
-        command.stdin(Stdio::inherit());
 
-        match command.output() {
-            Ok(output) => {
-                if output.status.success() {
-                    Ok(CompileStatus::Complete)
-                } else {
-                    Err(Error::CompileError(source_path.to_owned()))
-                }
-            }
+        match command.status() {
+            Ok(status) => match status.success() {
+                true => Ok(CompileStatus::Complete),
+                false => Err(Error::CompileError(source_path.to_owned())),
+            },
             Err(error) => Err(Error::RunCompilerError("assembly", error)),
         }
     }

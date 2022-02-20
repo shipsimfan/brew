@@ -1,24 +1,26 @@
-use std::path::PathBuf;
-
 use crate::brewfile::{BrewType, Brewfile, Language, Object};
+use std::path::PathBuf;
 
 mod error;
 mod lexer;
 
-pub fn parse_brewfile() -> Result<Brewfile, Box<dyn std::error::Error>> {
+pub fn parse_brewfile() -> Result<Brewfile, error::BrewfileError> {
     // Read brewfile
     let source = match std::fs::read_to_string(crate::config::BREWFILE_NAME) {
         Ok(source) => source,
-        Err(error) => return Err(Box::new(error::Error::ReadBrewfileError(error))),
+        Err(error) => return Err(error::BrewfileError::ReadBrewfileError(error)),
     };
 
     // Tokenize
-    let mut tokens = compiler::lexer::tokenize(
+    let mut tokens = match compiler::lexer::tokenize(
         source,
         lexer::get_next_token,
         lexer::TokenClass::EndOfFile,
         compiler::lexer::WhitespaceIgnore::AllExceptNewline(lexer::TokenClass::Newline),
-    )?;
+    ) {
+        Ok(tokens) => tokens,
+        Err(error) => return Err(error::BrewfileError::TokenizeError(error)),
+    };
 
     // Parse
     let mut brewfile = Brewfile::new();
@@ -39,10 +41,10 @@ pub fn parse_brewfile() -> Result<Brewfile, Box<dyn std::error::Error>> {
                         }
                     }
                     _ => {
-                        return Err(Box::new(error::Error::UnexpectedToken(
+                        return Err(error::BrewfileError::UnexpectedToken(
                             "equals or newline",
                             token.to_string(),
-                        )))
+                        ))
                     }
                 }
 
@@ -55,10 +57,10 @@ pub fn parse_brewfile() -> Result<Brewfile, Box<dyn std::error::Error>> {
                             parameters.push(parameter.to_owned())
                         }
                         _ => {
-                            return Err(Box::new(error::Error::UnexpectedToken(
+                            return Err(error::BrewfileError::UnexpectedToken(
                                 "parameter",
                                 token.to_string(),
-                            )))
+                            ))
                         }
                     }
 
@@ -69,10 +71,10 @@ pub fn parse_brewfile() -> Result<Brewfile, Box<dyn std::error::Error>> {
                             break 'parameter_loop token
                         }
                         _ => {
-                            return Err(Box::new(error::Error::UnexpectedToken(
+                            return Err(error::BrewfileError::UnexpectedToken(
                                 "comma or newline",
                                 token.to_string(),
-                            )))
+                            ))
                         }
                     }
                 };
@@ -85,10 +87,10 @@ pub fn parse_brewfile() -> Result<Brewfile, Box<dyn std::error::Error>> {
                 }
             }
             _ => {
-                return Err(Box::new(error::Error::UnexpectedToken(
+                return Err(error::BrewfileError::UnexpectedToken(
                     "command",
                     token.to_string(),
-                )))
+                ))
             }
         }
     }
@@ -98,15 +100,15 @@ fn parse_command(
     command: &str,
     parameters: Vec<String>,
     brewfile: &mut Brewfile,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), error::BrewfileError> {
     match command {
         "name" => {
             if parameters.len() != 1 {
-                return Err(Box::new(error::Error::InvalidNumberOfParameters(
+                return Err(error::BrewfileError::InvalidNumberOfParameters(
                     command.to_owned(),
                     1,
                     parameters.len(),
-                )));
+                ));
             }
 
             brewfile.set_name(parameters.get(0).unwrap().to_owned())?;
@@ -115,11 +117,11 @@ fn parse_command(
         }
         "type" => {
             if parameters.len() != 1 {
-                return Err(Box::new(error::Error::InvalidNumberOfParameters(
+                return Err(error::BrewfileError::InvalidNumberOfParameters(
                     command.to_owned(),
                     1,
                     parameters.len(),
-                )));
+                ));
             }
 
             let brew_type_str = parameters.get(0).unwrap();
@@ -128,9 +130,9 @@ fn parse_command(
                 "library" => BrewType::Library,
                 "group" => BrewType::Group,
                 _ => {
-                    return Err(Box::new(error::Error::UnknownBrewType(
+                    return Err(error::BrewfileError::UnknownBrewType(
                         brew_type_str.to_owned(),
-                    )))
+                    ))
                 }
             };
 
@@ -140,11 +142,11 @@ fn parse_command(
         }
         "languages" => {
             if parameters.len() == 0 {
-                return Err(Box::new(error::Error::AtleastParameters(
+                return Err(error::BrewfileError::AtleastParameters(
                     command.to_owned(),
                     1,
                     parameters.len(),
-                )));
+                ));
             }
 
             for parameter in parameters {
@@ -156,11 +158,11 @@ fn parse_command(
         }
         "dependencies" => {
             if parameters.len() == 0 {
-                return Err(Box::new(error::Error::AtleastParameters(
+                return Err(error::BrewfileError::AtleastParameters(
                     command.to_owned(),
                     1,
                     parameters.len(),
-                )));
+                ));
             }
 
             for parameter in parameters {
@@ -171,11 +173,11 @@ fn parse_command(
         }
         "priority" => {
             if parameters.len() == 0 {
-                return Err(Box::new(error::Error::AtleastParameters(
+                return Err(error::BrewfileError::AtleastParameters(
                     command.to_owned(),
                     1,
                     parameters.len(),
-                )));
+                ));
             }
 
             for parameter in parameters {
@@ -186,11 +188,11 @@ fn parse_command(
         }
         _ => {
             if parameters.len() != 3 {
-                return Err(Box::new(error::Error::InvalidNumberOfParameters(
+                return Err(error::BrewfileError::InvalidNumberOfParameters(
                     format!("object {}", command),
                     3,
                     parameters.len(),
-                )));
+                ));
             }
 
             let object_name = command.to_owned();

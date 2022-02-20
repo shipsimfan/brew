@@ -1,17 +1,12 @@
-use std::{
-    collections::HashSet,
-    path::PathBuf,
-    process::{Command, Stdio},
-};
+use crate::arguments::Options;
+use std::{collections::HashSet, path::PathBuf, process::Command};
 
-mod error;
+pub mod error;
 mod language;
 mod object;
 
 pub use language::Language;
 pub use object::Object;
-
-use crate::arguments::Options;
 
 pub enum BrewType {
     Executable,
@@ -41,31 +36,31 @@ impl Brewfile {
         }
     }
 
-    pub fn set_name(&mut self, name: String) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn set_name(&mut self, name: String) -> Result<(), error::Error> {
         match self.name {
-            Some(_) => Err(Box::new(error::Error::NameDefinedTwice)),
+            Some(_) => Err(error::Error::NameDefinedTwice),
             None => Ok(self.name = Some(name)),
         }
     }
 
-    pub fn set_brew_type(&mut self, brew_type: BrewType) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn set_brew_type(&mut self, brew_type: BrewType) -> Result<(), error::Error> {
         match self.brew_type {
             BrewType::None => Ok(self.brew_type = brew_type),
-            _ => Err(Box::new(error::Error::BrewTypeDefinedTwice)),
+            _ => Err(error::Error::BrewTypeDefinedTwice),
         }
     }
 
-    pub fn add_language(&mut self, language: Language) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn add_language(&mut self, language: Language) -> Result<(), error::Error> {
         if !self.languages.insert(language) {
-            Err(Box::new(error::Error::LanguageDefinedTwice(language)))
+            Err(error::Error::LanguageDefinedTwice(language))
         } else {
             Ok(())
         }
     }
 
-    pub fn add_dependency(&mut self, dependency: String) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn add_dependency(&mut self, dependency: String) -> Result<(), error::Error> {
         if !self.dependencies.insert(dependency.clone()) {
-            Err(Box::new(error::Error::DependencyDefinedTwice(dependency)))
+            Err(error::Error::DependencyDefinedTwice(dependency))
         } else {
             Ok(())
         }
@@ -221,22 +216,16 @@ impl Brewfile {
         command.arg(&output);
         command.args(objects);
         command.arg(format!("--sysroot={}", options.sysroot().to_string_lossy()));
-        command.stdout(Stdio::inherit());
-        command.stderr(Stdio::inherit());
-        command.stdin(Stdio::inherit());
 
         if !options.quiet() {
             println!("Linking {} . . .", output);
         }
 
-        match command.output() {
-            Ok(output) => {
-                if output.status.success() {
-                    Ok(())
-                } else {
-                    Err(error::Error::LinkerError)
-                }
-            }
+        match command.status() {
+            Ok(status) => match status.success() {
+                true => Ok(()),
+                false => Err(error::Error::LinkerError),
+            },
             Err(error) => Err(error::Error::RunLinkerError(error)),
         }
     }
@@ -251,22 +240,16 @@ impl Brewfile {
         command.args(crate::config::ARCHIVER_FLAGS);
         command.arg(&output);
         command.args(objects);
-        command.stdout(Stdio::inherit());
-        command.stderr(Stdio::inherit());
-        command.stdin(Stdio::inherit());
 
         if !options.quiet() {
             println!("Linking {} . . .", output);
         }
 
-        match command.output() {
-            Ok(output) => {
-                if output.status.success() {
-                    Ok(())
-                } else {
-                    Err(error::Error::LinkerError)
-                }
-            }
+        match command.status() {
+            Ok(status) => match status.success() {
+                true => Ok(()),
+                false => Err(error::Error::LinkerError),
+            },
             Err(error) => Err(error::Error::RunLinkerError(error)),
         }
     }
@@ -300,17 +283,13 @@ impl Brewfile {
 
         command.current_dir(&path);
 
-        command.stderr(Stdio::inherit());
-        command.stdin(Stdio::inherit());
-        command.stdout(Stdio::inherit());
-
         if !options.quiet() {
             println!("Brewing {} . . .", path.to_string_lossy());
         }
 
-        match command.output() {
-            Ok(output) => {
-                if !output.status.success() {
+        match command.status() {
+            Ok(status) => {
+                if !status.success() {
                     return Err(error::Error::BrewError(path));
                 }
             }
@@ -402,10 +381,10 @@ impl Brewfile {
         }
     }
 
-    pub fn execute(self, options: Options) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn execute(self, options: Options) -> Result<(), error::Error> {
         match self.brew_type {
             BrewType::Group => return Ok(self.brew_sub_folders(options)?),
-            BrewType::None => return Err(Box::new(error::Error::NoBrewType)),
+            BrewType::None => return Err(error::Error::NoBrewType),
             _ => {}
         }
 
@@ -446,7 +425,7 @@ impl Brewfile {
                                     "{}.app",
                                     match self.name {
                                         Some(name) => name,
-                                        None => return Err(Box::new(error::Error::NoName)),
+                                        None => return Err(error::Error::NoName),
                                     }
                                 )
                             }
@@ -456,7 +435,7 @@ impl Brewfile {
                                     "lib{}.a",
                                     match self.name {
                                         Some(name) => name,
-                                        None => return Err(Box::new(error::Error::NoName)),
+                                        None => return Err(error::Error::NoName),
                                     }
                                 )
                             }
@@ -471,9 +450,7 @@ impl Brewfile {
                         match std::fs::copy(&source, target_path) {
                             Ok(_) => {}
                             Err(error) => {
-                                return Err(Box::new(error::Error::InstallTargetError(
-                                    source, error,
-                                )))
+                                return Err(error::Error::InstallTargetError(source, error))
                             }
                         }
 

@@ -1,6 +1,5 @@
-use std::path::PathBuf;
-
 use super::Language;
+use std::path::PathBuf;
 
 #[derive(Debug)]
 pub enum Error {

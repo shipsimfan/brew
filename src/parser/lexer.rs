@@ -64,7 +64,7 @@ pub fn get_next_token(
                 iter.line(),
                 iter.column(),
             ))),
-            _ => Err(Box::new(super::error::Error::UnknownCharacter(
+            _ => Err(Box::new(super::error::BrewfileError::UnknownCharacter(
                 c,
                 iter.line(),
                 iter.column(),

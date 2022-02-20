@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
-pub enum Error {
+pub enum ArgumentError {
     TwoCommands,
     TwoSysroots,
     TwoPrefixes,
@@ -24,7 +24,7 @@ pub struct Options {
     prefix: PathBuf,
 }
 
-pub fn parse_arguments(arguments: Vec<String>) -> Result<Options, Error> {
+pub fn parse_arguments(arguments: Vec<String>) -> Result<Options, ArgumentError> {
     let mut command = None;
     let mut verbose = false;
     let mut quiet = false;
@@ -40,29 +40,29 @@ pub fn parse_arguments(arguments: Vec<String>) -> Result<Options, Error> {
             "--sysroot" => {
                 let new_sysroot = match iter.next() {
                     Some(string) => string,
-                    None => return Err(Error::NoSysrootAfterOption),
+                    None => return Err(ArgumentError::NoSysrootAfterOption),
                 };
 
                 match sysroot {
-                    Some(_) => return Err(Error::TwoSysroots),
+                    Some(_) => return Err(ArgumentError::TwoSysroots),
                     None => sysroot = Some(new_sysroot),
                 }
             }
             "--prefix" => {
                 let new_prefix = match iter.next() {
                     Some(string) => string,
-                    None => return Err(Error::NoPrefixAfterOption),
+                    None => return Err(ArgumentError::NoPrefixAfterOption),
                 };
 
                 match prefix {
-                    Some(_) => return Err(Error::TwoPrefixes),
+                    Some(_) => return Err(ArgumentError::TwoPrefixes),
                     None => prefix = Some(new_prefix),
                 }
             }
             _ => {
                 let new_command = Command::parse(argument)?;
                 match command {
-                    Some(_) => return Err(Error::TwoCommands),
+                    Some(_) => return Err(ArgumentError::TwoCommands),
                     None => command = Some(new_command),
                 }
             }
@@ -88,12 +88,12 @@ pub fn parse_arguments(arguments: Vec<String>) -> Result<Options, Error> {
 }
 
 impl Command {
-    pub fn parse(string: &str) -> Result<Self, Error> {
+    pub fn parse(string: &str) -> Result<Self, ArgumentError> {
         match string {
             "clean" => Ok(Command::Clean),
             "build" => Ok(Command::Build),
             "install" => Ok(Command::Install),
-            _ => Err(Error::InvalidCommand(string.to_owned())),
+            _ => Err(ArgumentError::InvalidCommand(string.to_owned())),
         }
     }
 }
@@ -112,20 +112,23 @@ impl std::fmt::Display for Command {
     }
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for ArgumentError {}
 
-impl std::fmt::Display for Error {
+impl std::fmt::Display for ArgumentError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                Error::TwoCommands => format!("Attempting to specify two commands"),
-                Error::TwoSysroots => format!("Attempting to specify two system roots"),
-                Error::TwoPrefixes => format!("Attempting to specify two prefixes"),
-                Error::InvalidCommand(command) => format!("Unknown command \"{}\"", command),
-                Error::NoSysrootAfterOption => format!("Nothing specified after \"--sysroot\""),
-                Error::NoPrefixAfterOption => format!("Nothing specified after \"--prefix\""),
+                ArgumentError::TwoCommands => format!("Attempting to specify two commands"),
+                ArgumentError::TwoSysroots => format!("Attempting to specify two system roots"),
+                ArgumentError::TwoPrefixes => format!("Attempting to specify two prefixes"),
+                ArgumentError::InvalidCommand(command) =>
+                    format!("Unknown command \"{}\"", command),
+                ArgumentError::NoSysrootAfterOption =>
+                    format!("Nothing specified after \"--sysroot\""),
+                ArgumentError::NoPrefixAfterOption =>
+                    format!("Nothing specified after \"--prefix\""),
             }
         )
     }

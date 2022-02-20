@@ -36,5 +36,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Execute the brewfile
-    brewfile.execute(options)
+    brewfile.execute(options)?;
+
+    Ok(())
 }
